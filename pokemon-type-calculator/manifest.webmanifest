@@ -8,8 +8,8 @@
   "theme_color": "#f6f5f2",
   "icons": [
     {
-      "src": "https://cdn.jsdelivr.net/gh/msikma/pokesprite@master/misc/types/gen8/electric.png",
-      "sizes": "128x128",
+      "src": "https://cdn.jsdelivr.net/gh/tksehd2/muse-web-apps@main/pokemon-type-calculator/icon-ball-180.png",
+      "sizes": "180x180",
       "type": "image/png"
     }
   ]
