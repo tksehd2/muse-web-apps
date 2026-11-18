@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>한국영화 OTT 책장</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OTT 책장">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#17100a">
+<link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/tksehd2/muse-web-apps@main/korean-movie-ott-shelf/icon-180.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<style>
+  :root {
+    --bg: #17100a; --surface: #2a1c0e; --text: #f5eedd; --muted: #a08b6d;
+    --amber: #e9a13b; --bookmark: #f2a93b; --watched: #35d461;
+    --disney: #113ccf; --prime: #00a8e1;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { overscroll-behavior: none; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  header {
+    padding: calc(14px + env(safe-area-inset-top)) 18px 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  header h1 { font-size: 20px; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
+  .head-right { display: flex; align-items: center; gap: 10px; }
+  #updated { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  #refresh {
+    width: 36px; height: 36px; border-radius: 50%; flex: none; cursor: pointer;
+    border: 1px solid rgba(245, 238, 221, 0.14); background: rgba(245, 238, 221, 0.05);
+    color: #cbb892; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  #refresh:active { transform: scale(0.94); }
+  #refresh.spinning svg { animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  main { padding: 6px 14px calc(120px + env(safe-area-inset-bottom)); }
+  #grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 12px; }
+  .card { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+  .poster-wrap { position: relative; }
+  .poster {
+    width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;
+    border-radius: 10px; background: #2a1e12; transition: transform 0.12s ease;
+  }
+  .card:active .poster { transform: scale(0.97); }
+  .mark-chip {
+    position: absolute; left: 6px; top: 6px; width: 24px; height: 24px;
+    border-radius: 8px; background: rgba(10, 6, 3, 0.62);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card .title {
+    margin-top: 7px; font-size: 13.5px; font-weight: 600; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .badge {
+    display: inline-block; margin-top: 4px; padding: 2.5px 7px; border-radius: 6px;
+    font-size: 10.5px; font-weight: 700;
+    background: rgba(245, 238, 221, 0.1); color: #d9c9a8;
+  }
+  .badge.disney { background: rgba(17, 60, 207, 0.35); color: #a9c2ff; }
+  .badge.prime { background: rgba(0, 168, 225, 0.22); color: #8fd8f5; }
+  #empty { display: none; text-align: center; color: var(--muted); padding: 64px 0; font-size: 14px; }
+  #status { text-align: center; color: var(--muted); padding: 64px 20px; font-size: 14px; line-height: 1.6; }
+
+  /* 하단 플로팅 필터 (리퀴드 글라스) */
+  #filterbar {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 40;
+    display: flex; align-items: center; gap: 2px; padding: 4px;
+    border-radius: 999px;
+    background: rgba(46, 33, 18, 0.55);
+    backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    border: 1px solid rgba(255, 235, 200, 0.16);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  #filterbar button {
+    border: 0; background: transparent; color: #cbb892;
+    font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    padding: 8px 13px; border-radius: 999px; white-space: nowrap;
+    display: flex; align-items: center; justify-content: center; min-height: 36px;
+  }
+  #filterbar button.on { background: var(--amber); color: #241708; }
+  #filterbar .sep { width: 1px; height: 20px; background: rgba(255, 235, 200, 0.16); margin: 0 3px; flex: none; }
+  #filterbar button.icon { padding: 8px 10px; }
+  #filterbar button.icon.on-want { background: rgba(242, 169, 59, 0.28); }
+  #filterbar button.icon.on-watched { background: rgba(53, 212, 97, 0.25); }
+
+  /* 바텀시트 */
+  #backdrop {
+    position: fixed; inset: 0; background: rgba(5, 3, 1, 0.6); z-index: 50;
+    opacity: 0; pointer-events: none; transition: opacity 0.28s ease;
+  }
+  #backdrop.open { opacity: 1; pointer-events: auto; }
+  #sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 51;
+    max-height: 92dvh; display: flex; flex-direction: column;
+    background: var(--surface); border-radius: 22px 22px 0 0;
+    transform: translateY(105%); transition: transform 0.32s cubic-bezier(0.32, 0.9, 0.35, 1);
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+  }
+  #sheet.open { transform: translateY(0); }
+  #sheet.dragging { transition: none; }
+  #sheet-head { padding: 8px 20px 2px; flex: none; }
+  #handle { width: 44px; height: 5px; border-radius: 3px; background: rgba(245, 238, 221, 0.28); margin: 2px auto 12px; }
+  #sheet-body { overflow-y: auto; overscroll-behavior: contain; padding: 0 20px calc(22px + env(safe-area-inset-bottom)); }
+  .detail-top { display: flex; gap: 16px; }
+  .detail-top img { width: 112px; aspect-ratio: 2/3; object-fit: cover; border-radius: 10px; background: #1c130a; flex: none; align-self: flex-start; }
+  .detail-top h2 { margin: 2px 0 8px; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+  .meta { font-size: 13.5px; color: #c9b892; line-height: 1.45; }
+  .credits { margin-top: 9px; font-size: 13px; line-height: 1.5; color: #e6d7b8; }
+  .credits .lbl { color: var(--muted); font-weight: 700; margin-right: 5px; }
+  .synopsis { margin-top: 18px; font-size: 14.5px; line-height: 1.65; color: #efe3cb; }
+  .watch-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 20px; min-height: 52px; border-radius: 14px;
+    font-size: 16px; font-weight: 800; color: #fff; text-decoration: none;
+  }
+  .watch-btn.disney { background: var(--disney); }
+  .watch-btn.prime { background: var(--prime); }
+  .watch-btn:active { filter: brightness(1.15); }
+  .mark-row { display: flex; gap: 10px; margin-top: 12px; }
+  .mark-btn {
+    flex: 1; min-height: 50px; border-radius: 14px; cursor: pointer;
+    border: 1px solid rgba(245, 238, 221, 0.14); background: rgba(245, 238, 221, 0.05);
+    color: var(--text); font: inherit; font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .mark-btn:active { transform: scale(0.98); }
+  .mark-btn.on-want { background: rgba(242, 169, 59, 0.22); border-color: rgba(242, 169, 59, 0.55); }
+  .mark-btn.on-watched { background: rgba(53, 212, 97, 0.18); border-color: rgba(53, 212, 97, 0.5); }
+  .search-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    margin-top: 12px; min-height: 50px; border-radius: 14px; width: 100%;
+    border: 1px solid rgba(245, 238, 221, 0.14); background: rgba(245, 238, 221, 0.05);
+    color: var(--text); font-size: 15px; font-weight: 700; text-decoration: none;
+  }
+  .search-btn:active { transform: scale(0.99); }
+</style>
+</head>
+<body>
+<header>
+  <h1>한국영화 OTT 책장</h1>
+  <div class="head-right">
+    <span id="updated"></span>
+    <button id="refresh" aria-label="새로고침"></button>
+  </div>
+</header>
+<main>
+  <div id="status">불러오는 중…</div>
+  <div id="grid"></div>
+  <div id="empty">표시할 영화가 없어요</div>
+</main>
+
+<nav id="filterbar" aria-label="필터">
+  <button data-platform="all" class="on">전체</button>
+  <button data-platform="disney">Disney+</button>
+  <button data-platform="prime">Prime</button>
+  <span class="sep"></span>
+  <button class="icon" id="f-want" aria-label="볼 영화만 보기"></button>
+  <button class="icon" id="f-watched" aria-label="본 영화만 보기"></button>
+</nav>
+
+<div id="backdrop"></div>
+<section id="sheet" aria-hidden="true">
+  <div id="sheet-head"><div id="handle"></div></div>
+  <div id="sheet-body"></div>
+</section>
+
+<script>
+"use strict";
+const MARKS_KEY = "ottShelfMarks.v1";
+const ICON_BOOKMARK = '<svg width="17" height="17" viewBox="0 0 24 24" fill="#f2a93b" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const ICON_CHECK = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#35d461" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+const ICON_BOOKMARK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#f2a93b" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const ICON_CHECK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#35d461" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+const ICON_SEARCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+
+const state = { cards: [], platform: "all", markFilter: null, marks: loadMarks(), current: null };
+
+function loadMarks() {
+  try { return JSON.parse(localStorage.getItem(MARKS_KEY)) || {}; } catch { return {}; }
+}
+function saveMarks() {
+  try { localStorage.setItem(MARKS_KEY, JSON.stringify(state.marks)); } catch {}
+}
+function flag(country) { return country === "KR" ? "🇰🇷" : "🇯🇵"; }
+function platformName(p) { return p === "disney" ? "Disney+" : "prime video"; }
+function badgeName(p) { return p === "disney" ? "Disney+" : "prime"; }
+function fmtRuntime(min) {
+  if (!min) return "";
+  const h = Math.floor(min / 60), r = min % 60;
+  return h ? (r ? h + "시간 " + r + "분" : h + "시간") : r + "분";
+}
+function fmtUpdated(iso, count) {
+  const d = new Date(iso);
+  const t = d.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit", hour12: true });
+  return "업데이트 " + t + " · " + count + "편";
+}
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+
+function visibleCards() {
+  return state.cards.filter((c) =>
+    (state.platform === "all" || c.platform === state.platform) &&
+    (!state.markFilter || state.marks[c.jwId] === state.markFilter));
+}
+
+function render() {
+  const grid = document.getElementById("grid");
+  const list = visibleCards();
+  document.getElementById("empty").style.display = list.length ? "none" : "block";
+  grid.innerHTML = list.map((c) => {
+    const m = state.marks[c.jwId];
+    const chip = m === "want" ? '<span class="mark-chip">' + ICON_BOOKMARK_SM + "</span>"
+               : m === "watched" ? '<span class="mark-chip">' + ICON_CHECK_SM + "</span>" : "";
+    return '<button class="card" data-jwid="' + esc(c.jwId) + '" data-country="' + c.country + '" data-platform="' + c.platform + '">'
+      + '<span class="poster-wrap"><img class="poster" loading="lazy" alt="" src="' + esc(c.poster || "") + '">' + chip + "</span>"
+      + '<span class="title">' + esc(c.title) + "</span>"
+      + '<span class="badge ' + c.platform + '">' + badgeName(c.platform) + "</span>"
+      + "</button>";
+  }).join("");
+}
+
+/* ---------- 카탈로그: Apps Script에서 받고 캐시는 로컬에서 관리 ---------- */
+const API_URL = "https://script.google.com/macros/s/AKfycbxFTv8opjyUhphQvjdry3NvLgnxkbeXwrtmKlDJ98GaHIuAmbHBXA6jo9-9J6T9lS0Mqg/exec";
+const CATALOG_KEY = "ottShelfCatalog.v1";
+const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
+const ICON_REFRESH = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>';
+
+function applyData(data) {
+  state.cards = data.cards || [];
+  document.getElementById("updated").textContent = fmtUpdated(data.generatedAt, data.count);
+  document.getElementById("status").style.display = "none";
+  render();
+}
+function readCache() {
+  try {
+    const o = JSON.parse(localStorage.getItem(CATALOG_KEY));
+    if (o && o.data && o.data.cards && o.fetchedAt) return o;
+  } catch (e) {}
+  return null;
+}
+function writeCache(data) {
+  try { localStorage.setItem(CATALOG_KEY, JSON.stringify({ fetchedAt: Date.now(), data })); } catch (e) {}
+}
+async function fetchCatalog() {
+  if (!API_URL) throw new Error("API_URL not set");
+  const res = await fetch(API_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const data = await res.json();
+  if (!data || !data.cards || !data.cards.length) throw new Error("empty catalog");
+  return data;
+}
+async function refresh(showError) {
+  const btn = document.getElementById("refresh");
+  btn.classList.add("spinning");
+  try {
+    const data = await fetchCatalog();
+    writeCache(data);
+    applyData(data);
+  } catch (e) {
+    if (showError) document.getElementById("status").textContent = "카탈로그를 불러오지 못했어요. 잠시 후 다시 시도해주세요.";
+  } finally {
+    btn.classList.remove("spinning");
+  }
+}
+async function load() {
+  document.getElementById("refresh").innerHTML = ICON_REFRESH;
+  document.getElementById("refresh").addEventListener("click", () => refresh(false));
+  const cached = readCache();
+  if (cached) {
+    applyData(cached.data);
+    if (Date.now() - cached.fetchedAt < CACHE_TTL_MS) return;
+    refresh(false); // 캐시가 오래됐으면 뒤에서 조용히 갱신
+    return;
+  }
+  await refresh(true);
+}
+/* ---------- 상세 바텀시트 ---------- */
+const sheet = document.getElementById("sheet");
+const sheetBody = document.getElementById("sheet-body");
+const backdrop = document.getElementById("backdrop");
+
+function sheetHTML(c) {
+  const meta = [c.year, fmtRuntime(c.runtime), (c.genres || []).join(" · ")].filter(Boolean).join(" | ");
+  const credits = [];
+  if (c.director) credits.push('<div><span class="lbl">감독</span>' + esc(c.director) + "</div>");
+  if (c.cast && c.cast.length) credits.push('<div><span class="lbl">출연</span>' + esc(c.cast.join(", ")) + "</div>");
+  let watch = "";
+  if (c.flatrateUrl) {
+    watch = '<a class="watch-btn ' + c.platform + '" href="' + esc(c.flatrateUrl) + '" target="_blank" rel="noopener">'
+      + "<span>" + flag(c.country) + "</span><span>" + platformName(c.platform) + "에서 보기</span></a>";
+  } else if (c.rentUrl) {
+    watch = '<a class="watch-btn ' + c.platform + '" href="' + esc(c.rentUrl) + '" target="_blank" rel="noopener">'
+      + "<span>" + flag(c.country) + "</span><span>" + platformName(c.platform) + " 대여" + (c.rentPriceLabel ? " " + esc(c.rentPriceLabel) : "") + "</span></a>";
+  }
+  const m = state.marks[c.jwId];
+  const q = encodeURIComponent(c.title + " 영화" + (c.year ? " " + c.year : ""));
+  return '<div class="detail-top">'
+    + '<img alt="" src="' + esc(c.poster || "") + '">'
+    + "<div><h2>" + esc(c.title) + '</h2><div class="meta">' + esc(meta) + "</div>"
+    + (credits.length ? '<div class="credits">' + credits.join("") + "</div>" : "")
+    + "</div></div>"
+    + (c.synopsis ? '<p class="synopsis">' + esc(c.synopsis) + "</p>" : "")
+    + watch
+    + '<div class="mark-row">'
+    + '<button class="mark-btn' + (m === "want" ? " on-want" : "") + '" id="m-want">' + ICON_BOOKMARK + " 볼 영화</button>"
+    + '<button class="mark-btn' + (m === "watched" ? " on-watched" : "") + '" id="m-watched">' + ICON_CHECK + " 본 영화</button>"
+    + "</div>"
+    + '<a class="search-btn" href="https://www.google.com/search?q=' + q + '" target="_blank" rel="noopener">' + ICON_SEARCH + " 영화정보 검색</a>";
+}
+
+function openSheet(card) {
+  state.current = card;
+  sheetBody.innerHTML = sheetHTML(card);
+  sheetBody.scrollTop = 0;
+  document.getElementById("m-want").addEventListener("click", () => setMark("want"));
+  document.getElementById("m-watched").addEventListener("click", () => setMark("watched"));
+  backdrop.classList.add("open");
+  sheet.classList.add("open");
+  sheet.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+function closeSheet() {
+  backdrop.classList.remove("open");
+  sheet.classList.remove("open");
+  sheet.setAttribute("aria-hidden", "true");
+  sheet.style.transform = "";
+  document.body.style.overflow = "";
+  state.current = null;
+}
+function setMark(kind) {
+  const c = state.current;
+  if (!c) return;
+  if (state.marks[c.jwId] === kind) delete state.marks[c.jwId];
+  else state.marks[c.jwId] = kind;
+  saveMarks();
+  sheetBody.innerHTML = sheetHTML(c);
+  document.getElementById("m-want").addEventListener("click", () => setMark("want"));
+  document.getElementById("m-watched").addEventListener("click", () => setMark("watched"));
+  render();
+}
+backdrop.addEventListener("click", closeSheet);
+
+/* 시트 드래그로 닫기: 콘텐츠가 맨 위일 때 아래로 당기면 시트가 따라 내려온다 */
+let drag = null;
+sheet.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  drag = { y: t.clientY, time: Date.now(), active: false };
+}, { passive: true });
+sheet.addEventListener("touchmove", (e) => {
+  if (!drag) return;
+  const t = e.touches[0];
+  const dy = t.clientY - drag.y;
+  const fromHead = e.target.closest("#sheet-head") !== null;
+  if (!drag.active && dy > 4 && (fromHead || sheetBody.scrollTop <= 0)) drag.active = true;
+  if (drag.active) {
+    e.preventDefault();
+    sheet.classList.add("dragging");
+    sheet.style.transform = "translateY(" + Math.max(0, dy) + "px)";
+    drag.dy = dy;
+  }
+}, { passive: false });
+sheet.addEventListener("touchend", () => {
+  if (!drag) return;
+  const dy = drag.dy || 0;
+  const dt = Math.max(1, Date.now() - drag.time);
+  sheet.classList.remove("dragging");
+  if (drag.active && (dy > 110 || dy / dt > 0.45)) closeSheet();
+  else sheet.style.transform = "";
+  drag = null;
+});
+
+/* ---------- 필터 ---------- */
+const fWant = document.getElementById("f-want");
+const fWatched = document.getElementById("f-watched");
+fWant.innerHTML = ICON_BOOKMARK;
+fWatched.innerHTML = ICON_CHECK;
+document.querySelectorAll("#filterbar [data-platform]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    state.platform = btn.dataset.platform;
+    document.querySelectorAll("#filterbar [data-platform]").forEach((b) => b.classList.toggle("on", b === btn));
+    render();
+  });
+});
+function toggleMarkFilter(kind, btn, cls) {
+  state.markFilter = state.markFilter === kind ? null : kind;
+  fWant.classList.toggle("on-want", state.markFilter === "want");
+  fWatched.classList.toggle("on-watched", state.markFilter === "watched");
+  render();
+}
+fWant.addEventListener("click", () => toggleMarkFilter("want"));
+fWatched.addEventListener("click", () => toggleMarkFilter("watched"));
+
+/* ---------- 카드 탭 ---------- */
+document.getElementById("grid").addEventListener("click", (e) => {
+  const el = e.target.closest(".card");
+  if (!el) return;
+  const card = state.cards.find((c) => c.jwId === el.dataset.jwid && c.country === el.dataset.country && c.platform === el.dataset.platform);
+  if (card) openSheet(card);
+});
+
+load();
+</script>
+</body>
+</html>
