@@ -40,8 +40,8 @@
   #refresh.spinning svg { animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   main { padding: 6px 14px calc(120px + env(safe-area-inset-bottom)); }
-  #grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 12px; }
-  .card { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; min-width: 0; }
+  #grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 12px; align-items: start; }
+  .card { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; min-width: 0; display: flex; flex-direction: column; align-items: stretch; }
   .poster-wrap { position: relative; min-width: 0; }
   .poster {
     width: 100%; max-width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;
@@ -54,12 +54,13 @@
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     display: flex; align-items: center; justify-content: center;
   }
+  .meta-line { display: flex; align-items: center; gap: 6px; margin-top: 7px; min-width: 0; }
   .card .title {
-    margin-top: 7px; font-size: 13.5px; font-weight: 600; line-height: 1.25;
+    flex: 1 1 auto; min-width: 0; font-size: 13.5px; font-weight: 600; line-height: 1.25;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .badge {
-    display: inline-block; margin-top: 4px; padding: 2.5px 7px; border-radius: 6px;
+    flex: none; padding: 2.5px 7px; border-radius: 6px;
     font-size: 10.5px; font-weight: 700;
     background: rgba(245, 238, 221, 0.1); color: #d9c9a8;
   }
@@ -222,8 +223,7 @@ function render() {
                : m === "watched" ? '<span class="mark-chip">' + ICON_CHECK_SM + "</span>" : "";
     return '<button class="card" data-jwid="' + esc(c.jwId) + '" data-country="' + c.country + '" data-platform="' + c.platform + '">'
       + '<span class="poster-wrap"><img class="poster" loading="lazy" alt="" src="' + esc(c.poster || "") + '">' + chip + "</span>"
-      + '<span class="title">' + esc(c.title) + "</span>"
-      + '<span class="badge ' + c.platform + '">' + badgeName(c.platform) + "</span>"
+      + '<span class="meta-line"><span class="title">' + esc(c.title) + '</span><span class="badge ' + c.platform + '">' + badgeName(c.platform) + "</span></span>"
       + "</button>";
   }).join("");
 }
