@@ -14,7 +14,7 @@
 <style>
   :root {
     --bg: #17100a; --surface: #2a1c0e; --text: #f5eedd; --muted: #a08b6d;
-    --amber: #e9a13b; --bookmark: #f2a93b; --watched: #35d461;
+    --amber: #e9a13b; --bookmark: #35d461; --watched: #c084fc;
     --disney: #113ccf; --prime: #00a8e1;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -88,8 +88,8 @@
   #filterbar button.on { background: var(--amber); color: #241708; }
   #filterbar .sep { width: 1px; height: 20px; background: rgba(255, 235, 200, 0.16); margin: 0 3px; flex: none; }
   #filterbar button.icon { padding: 8px 10px; }
-  #filterbar button.icon.on-want { background: rgba(242, 169, 59, 0.28); }
-  #filterbar button.icon.on-watched { background: rgba(53, 212, 97, 0.25); }
+  #filterbar button.icon.on-want { background: rgba(53, 212, 97, 0.28); }
+  #filterbar button.icon.on-watched { background: rgba(192, 132, 252, 0.25); }
 
   /* 바텀시트 */
   #backdrop {
@@ -132,8 +132,8 @@
     display: flex; align-items: center; justify-content: center; gap: 7px;
   }
   .mark-btn:active { transform: scale(0.98); }
-  .mark-btn.on-want { background: rgba(242, 169, 59, 0.22); border-color: rgba(242, 169, 59, 0.55); }
-  .mark-btn.on-watched { background: rgba(53, 212, 97, 0.18); border-color: rgba(53, 212, 97, 0.5); }
+  .mark-btn.on-want { background: rgba(53, 212, 97, 0.22); border-color: rgba(53, 212, 97, 0.55); }
+  .mark-btn.on-watched { background: rgba(192, 132, 252, 0.18); border-color: rgba(192, 132, 252, 0.5); }
   .search-btn {
     display: flex; align-items: center; justify-content: center; gap: 7px;
     margin-top: 12px; min-height: 50px; border-radius: 14px; width: 100%;
@@ -175,10 +175,10 @@
 <script>
 "use strict";
 const MARKS_KEY = "ottShelfMarks.v1";
-const ICON_BOOKMARK = '<svg width="17" height="17" viewBox="0 0 24 24" fill="#f2a93b" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-const ICON_CHECK = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#35d461" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
-const ICON_BOOKMARK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#f2a93b" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-const ICON_CHECK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#35d461" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+const ICON_BOOKMARK = '<svg width="17" height="17" viewBox="0 0 24 24" fill="#35d461" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const ICON_CHECK = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+const ICON_BOOKMARK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#35d461" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const ICON_CHECK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
 const ICON_SEARCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
 
 const state = { cards: [], platform: "all", markFilter: null, marks: loadMarks(), current: null };
@@ -240,6 +240,11 @@ function applyData(data) {
   const jpKeys = new Set();
   all.forEach((c) => { if (c.country === "JP") jpKeys.add(c.jwId + "|" + c.platform); });
   state.cards = all.filter((c) => !(c.country === "KR" && jpKeys.has(c.jwId + "|" + c.platform)));
+  // 플랫폼 등록일(제공 시작일) 최신순 정렬 — 날짜가 같으면 받은 순서 유지
+  state.cards.sort((a, b) => {
+    const da = a.addedAt || "", db = b.addedAt || "";
+    return da < db ? 1 : da > db ? -1 : 0;
+  });
   document.getElementById("updated").textContent = fmtUpdated(data.generatedAt, state.cards.length);
   document.getElementById("status").style.display = "none";
   render();
